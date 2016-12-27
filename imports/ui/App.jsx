@@ -25,12 +25,7 @@ class App extends Component {
     const text = ReactDOM.findDOMNode(this.refs.textInput).value.trim();
 
     // Create a new task
-    Tasks.insert({
-      text: text,
-      createdAt: new Date(), // current time
-      owner: Meteor.userId(), // _id of logged in user
-      username: Meteor.user().username // username of logged in user
-    });
+    Meteor.call('tasks.insert', text);
 
     // Clear form
     ReactDOM.findDOMNode(this.refs.textInput).value = '';
@@ -49,7 +44,16 @@ class App extends Component {
       filteredTasks = filteredTasks.filter(task => !task.checked);
     }
     return filteredTasks.map((task) => {
-      return <Task key={task._id} task={task} />
+      const currentUserId = this.props.currentUser && this.props.currentUser._id;
+      const showPrivateButton = task.owner === currentUserId;
+
+      return (
+        <Task
+          key={task._id}
+          task={task}
+          showPrivateButton={showPrivateButton}
+        />
+      );
     });
   }
 
@@ -97,6 +101,8 @@ App.propTypes = {
 };
 
 export default createContainer(() => {
+  Meteor.subscribe('tasks');
+
   return {
     tasks: Tasks.find({}, { sort: { createdAt: -1 } }).fetch(),
     incompleteCount: Tasks.find({ checked: { $ne: true } }).count(),
